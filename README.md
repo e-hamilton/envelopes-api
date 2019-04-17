@@ -1,4 +1,4 @@
-# RESTful Envelope Budget Planner
+# RESTful Envelope Budgeting API
 
 ## About this Project
 
