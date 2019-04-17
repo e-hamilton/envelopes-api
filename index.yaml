@@ -1,0 +1,16 @@
+indexes: 
+
+- kind: User
+  ancestor: no
+  properties:
+  - name: __key__
+  - name: email
+  - name: first
+  - name: last
+
+- kind: User
+  ancestor: no
+  properties:
+  - name: email
+  - name: first
+  - name: last

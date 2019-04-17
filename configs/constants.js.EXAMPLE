@@ -1,0 +1,21 @@
+"use strict";
+
+module.exports = Object.freeze({
+	ENVELOPE: "Envelope",
+	EXPENSE: "Expense",
+	USER: "User",
+	SALT_ROUNDS: 12,
+	PAGE_LIMIT: 5,
+	LIMITS: {
+		PW_MIN: 8,
+		PW_MAX: 64,
+		STRING_MAX: 250,
+		TEXT_MAX: 5000
+	}, 
+	JWT: {
+		ISS: "SOME-IDENTIFIER-FOR-YOUR-APP-HERE",
+		AUD: "SOME-IDENTIFIER-FOR-YOUR-APP-HERE",
+		EXP: "12h",
+		ALG: "RS256"
+	}
+});

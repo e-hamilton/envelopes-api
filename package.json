@@ -1,0 +1,19 @@
+{
+  "name": "budget-api",
+  "version": "1.0.0",
+  "description": "A simple personal finance budgeting API.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js"
+  },
+  "author": "Emily Hamilton (https://github.com/e-hamilton)",
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/datastore": "^3.1.2",
+    "bcrypt": "^3.0.5",
+    "express": "^4.16.4",
+    "joi": "^14.3.1",
+    "jsonwebtoken": "^8.5.1"
+  }
+}

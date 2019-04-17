@@ -1,0 +1,6 @@
+node_modules/
+configs/constants.js
+configs/datastore.js
+configs/google_key.json
+configs/private.KEY
+configs/public.KEY

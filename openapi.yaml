@@ -1,0 +1,1021 @@
+openapi: 3.0.0
+info:
+  version: "1.0.0"
+  title: Envelope Budgeting API
+  description: This simple personal finance budgeting API allows users to organize expenses into "envelopes" using the "envelope budgeting" strategy. More background information on this API is available on the project's README at [https://github.com/e-hamilton](https://github.com/e-hamilton).
+externalDocs: 
+  url: https://github.com/e-hamilton
+  description: View on GitHub
+servers:
+  - url: https://envelopes-api.herokuapp.com/
+    description: Heroku
+tags:
+  - name: Authentication
+  - name: Users
+  - name: Envelopes
+  - name: Expenses
+  - name: Associated Envelopes & Expenses
+  - name: User Property
+paths:
+  /auth:
+    post:
+      summary: Exchange user credentials for an access token.
+      description: Takes a user email and password and returns a signed JWT if valid.
+      tags:
+      - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  description: An existing user's email address.
+                password:
+                  type: string
+                  description: The same user's password.
+            example:
+              email: major.tom@spaceoddity.com
+              password: groundcontrol
+      responses:
+        200:
+          description: User has been successfully authenticated; returns a signed JWT.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    description: The token type, "x-access-code", which is to be used as the token header when submitting subsequent requests.
+                  token:
+                    type: string
+                    description: The signed JWT, which will expire in 12h.
+              example:
+                type: x-access-token
+                token: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQ4NTYwMDgwODYxMjY1OTIiLCJpYXQiOjE1NTQ5MjkwMTQsImV4cCI6MTU1NDk3MjIxNCwiYXVkIjoiZWhhbWlsdG9uLWJ1ZGdldGFwaS5oZXJva3VhcHAuY29tIiwiaXNzIjoiZWhhbWlsdG9uLWJ1ZGdldGFwaSIsInN1YiI6ImVtaWx5QHRlc3QuY29tIn0.gk5eLkIrY3bHYU82LMI1mxB2_9f2b_VMP1oD1Tz4Q9f61dAt-ADI9f7OE7IX0xZOMltM68N9aHxy-TaNWImvWA
+        400:
+          description: Request body does not follow the required schema (e.g. the user did not provide both email and password, the email cannot be parsed as an email address, etc.).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: password is required
+        401:
+          description: User did not provide a recognized email and/or password.
+          content:
+            application/json:
+              schema: 
+                $ref: "#/components/schemas/Error"
+              example:
+                error: Invalid email or password.
+  /envelopes:
+    get:
+      summary: Get all envelopes in the system.
+      description: Returns a paginated collection of envelopes belonging to all users. Currently, the maximum number of items per page is set to 5 for testing purposes.
+      tags:
+      - Envelopes
+      parameters: 
+      - name: x-access-token
+        in: header
+        description: Valid JWT for *any* user obtained from POST /auth.
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          $ref: "#/components/responses/Success_EnvelopesCollection"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      summary: Create a new envelope.
+      description: Create a new envelope belonging to the user associated with the access token in the request.
+      tags:
+      - Envelopes
+      parameters: 
+      - name: x-access-token
+        in: header
+        description: Valid JWT for *any* user obtained from POST /auth.
+        required: true
+        schema:
+          type: string
+      requestBody:
+          content:
+            application/json:
+              schema:
+                required:
+                  - name
+                  - totalAmount
+                properties:
+                  name:
+                    type: string
+                    description: The name of the envelope.
+                  totalAmount:
+                    type: number
+                    description: The total amount of money allotted to the envelope.
+              example: 
+                name: Space supplies
+                totalAmount: 500
+      responses:
+        201:
+          description: Envelope successfully created.
+          headers:
+            location:
+              description: A direct link to the newly-created resource.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The datastore ID of the newly created resource.
+              example: 
+                id: "5555667788990011"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+  /envelopes/{id}:
+    parameters: 
+      - name: id
+        in: path
+        description: ID of the envelope to access.
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get a specific envelope.
+      description: Fetches a single envelope by ID.
+      tags:
+      - Envelopes
+      parameters:
+        - name: x-access-token
+          in: header
+          description: Valid JWT for *any* user obtained from POST /auth.
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Successfully able to retrieve envelope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+              example: 
+                id: "5678567856785678"
+                name: Space Supplies
+                self: https://app.com/envelopes/5678567856785678
+                owner:
+                  id: "1234123412341234"
+                  self: https://app.com/users/1234123412341234
+                expenses:
+                  - id: "222233332223333"
+                    self: https://app.com/expenses/222233332223333
+                  - id: "3333222233332222"
+                    self: https://app.com/expenses/3333222233332222
+                totalAmount: 500
+                amountReserved: 261.22
+                amountFree: 238.78
+                expenseCount: 2
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        404:
+          $ref: "#/components/responses/NotFound"
+    patch:
+      summary: Update an envelope.
+      description: Updates the specified envelope. Any properties omitted from the request body will not be updated. For instance, if the request body only contains "totalAmount", only the envelope's totalAmount will be updated; its name will not be modified.
+      tags:
+      - Envelopes
+      parameters:
+      - name: x-access-token
+        in: header
+        description: Valid JWT for the *owner* of the envelope.
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                name:
+                  type: string
+                  description: The name of the envelope.
+                totalAmount:
+                  type: number
+                  description: The total amount of money allotted to the envelope.
+            example: 
+              name: Space Supplies - updated
+              totalAmount: 550
+      responses:
+        303:
+          description: Envelope updated successfully.
+          headers:
+            location:
+              description: A direct link to the updated resource.
+              schema:
+                type: string
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        404:
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Delete an envelope.
+      description: Deletes the specified envelope.
+      tags:
+      - Envelopes
+      parameters:
+      - name: x-access-token
+        in: header
+        description: Valid JWT for the *owner* of the envelope.
+        required: true
+        schema:
+          type: string
+      responses:
+        204:
+          description: Envelope deleted successfully.
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        404:
+          $ref: "#/components/responses/NotFound"
+  /expenses:
+    get:
+      summary: Get all expenses in the system.
+      description: Returns a paginated collection of envelopes belonging to all users. Currently, the maximum number of items per page is set to 5 for testing purposes.
+      tags:
+      - Expenses
+      parameters:
+      - name: x-access-token
+        in: header
+        description: Valid JWT for *any* user obtained from POST /auth.
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          $ref: "#/components/responses/Success_ExpensesCollection"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      summary: Create a new expense.
+      description: Create a new expense belonging to the user associated with the access token in the request.
+      tags:
+      - Expenses
+      parameters:
+      - name: x-access-token
+        in: header
+        description: Valid JWT for *any* user obtained from POST /auth.
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+              - name
+              - description
+              - cost
+              properties:
+                name:
+                  type: string
+                  description: The name of the expense.
+                description:
+                  type: string
+                  description: A description of the expense.
+                cost:
+                  type: number
+                  description: The expense's cost.
+            example:
+              name: New spacesuit helmet
+              description: To stay safe while sitting in a tin can far above the world...
+              cost: 250
+      responses:
+        201:
+          description: Expense successfully created.
+          headers:
+            location:
+              description: A direct link to the newly-created resource.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The datastore ID of the newly created resource.
+                example:
+                  id: "222233332223333"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+  /expenses/{id}:
+    parameters:
+      - name: id
+        in: path
+        description: ID of the expense to access.
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get a specific expense.
+      description: Fetches a single expense by ID.
+      tags:
+      - Expenses
+      parameters:
+        - name: x-access-token
+          in: header
+          description: Valid JWT for *any* user obtained from POST /auth.
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Successfully able to retrieve expense.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+              example:
+                id: "222233332223333"
+                name: New spacesuit helmet
+                self: https://app.com/expenses/222233332223333
+                owner:
+                  id: "1234123412341234"
+                  self: https://app.com/expenses/1234123412341234
+                envelope:
+                  id: "5678567856785678"
+                  self: https://app.com/envelopes/5678567856785678
+                description: To stay safe while sitting in a tin can far above the world...
+                cost: 250
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        404:
+          $ref: "#/components/responses/NotFound"
+    patch:
+      summary: Update an expense.
+      description: Updates the specified expense. Any properties omitted from the request body will not be updated. For instance, if the request body only contains "cost", only the expense's cost will be updated; its name and description will not be modified.
+      tags:
+      - Expenses
+      parameters:
+      - name: x-access-token
+        in: header
+        description: Valid JWT for the *owner* of the expense.
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                name:
+                  type: string
+                  description: The name of the expense.
+                description:
+                  type: string
+                  description: A description of the expense.
+                cost:
+                  type: number
+                  description: The expense's cost.
+            example:
+              name: New spacesuit helmet - updated
+              description: Updated description
+              cost: 255
+      responses:
+        303:
+          description: Expense updated successfully.
+          headers:
+            location:
+              description: A direct link to the updated resource.
+              schema:
+                type: string
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        404:
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Delete an expense.
+      description: Deletes the specified expense.
+      tags:
+        - Expenses
+      parameters:
+        - name: x-access-token
+          in: header
+          description: Valid JWT for the *owner* of the expense.
+          required: true
+          schema:
+            type: string
+      responses:
+        204:
+          description: Expense deleted successfully.
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        404:
+          $ref: "#/components/responses/NotFound"
+  /envelopes/{envelopeId}/expenses:
+    parameters: 
+      - name: envelopeId
+        in: path
+        description: ID of the envelope to access.
+        required: true
+        schema:
+          type: string
+      - name: x-access-token
+        in: header
+        description: Valid JWT for *any* user obtained from POST /auth.
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get an envelope's expenses.
+      description: Returns a collection of expenses belonging to the envelope specified in the path.
+      tags:
+      - Associated Envelopes & Expenses
+      responses:
+        200:
+          $ref: "#/components/responses/Success_ExpensesCollection"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        404:
+          $ref: "#/components/responses/NotFound"
+  /envelopes/{envelopeId}/expenses/{expenseId}:
+    parameters:
+      - name: envelopeId
+        in: path
+        description: ID of the envelope to access.
+        required: true
+        schema:
+          type: string
+      - name: expenseId
+        in: path
+        description: ID of the envelope to access.
+        required: true
+        schema:
+          type: string
+      - name: x-access-token
+        in: header
+        description: Valid JWT for the *owner* of both the envelope and expense specified in the path.
+        required: true
+        schema:
+          type: string
+    put:
+      summary: Add an expense to an envelope.
+      description: Associates the expense and envelope specified in the path. If the expense is already in an envelope, it will be moved from the old envelope to the new one. An expense can't have more than one envelope.
+      tags:
+      - Associated Envelopes & Expenses
+      responses:
+        303:
+          description: Successfully able to add expense to envelope.
+          headers:
+            location:
+              description: A direct link to the updated resource.
+              schema:
+                type: string
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        404:
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Remove an expense from an envelope.
+      description: Disassociates the expense and envelope specified in the path. The expense's envelope is reset to null.
+      tags:
+      - Associated Envelopes & Expenses
+      responses:
+        204:
+          description: Successfully able to remove expense from envelope.
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        404:
+          $ref: "#/components/responses/NotFound"
+  /users:
+    post:
+      summary: Create a new user.
+      description: Create a new user (no token required).
+      tags:
+        - Users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/User"
+            example:
+              email: ziggy.stardust@spidersfrommars.org
+              password: Z1ggyPlayedGu1tar
+              first: Ziggy
+              last: Stardust
+      responses:
+        201:
+          description: User successfully created.
+          headers:
+            location:
+              description: A direct link to the newly-created resource.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The datastore ID of the newly created resource.
+                example:
+                  id: "4321432143214321"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+    get:
+      summary: Get all users in the system.
+      description: Returns a paginated collection of users (passwords not included, for obvious reasons). Currently, the maximum number of items per page is set to 5 for testing purposes.
+      tags:
+        - Users
+      parameters:
+        - name: x-access-token
+          in: header
+          description: Valid JWT for *any* user obtained from POST /auth.
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Successfully retrieved collection of users.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Users_Collection"
+              example: 
+                items:
+                - id: "1234123412341234"
+                  first: Major
+                  last: Tom
+                  email: major.tom@groundcontrol.com
+                  self: https://app.com/envelopes/1234123412341234
+                - id: "4321432143214321"
+                  first: Ziggy
+                  last: Stardust
+                  email: ziggy.stardust@spidersfrommars.org
+                  self: https://app.com/envelopes/4321432143214321
+                count: 2
+        401:
+          $ref: "#/components/responses/Unauthorized"
+  /users/{id}:
+    parameters:
+      - name: id
+        in: path
+        description: ID of the user to access.
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get a specific user.
+      description: Fetches a single user by ID.
+      tags:
+      - Users
+      parameters:
+        - name: x-access-token
+          in: header
+          description: Valid JWT for *any* user obtained from POST /auth.
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Successfully able to retrieve user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User_Protected"
+              example:
+                id: "1234123412341234"
+                first: Major
+                last: Tom
+                email: major.tom@groundcontrol.com
+                self: https://app.com/envelopes/1234123412341234
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        404:
+          $ref: "#/components/responses/NotFound"
+    patch:
+      summary: Update a user.
+      description: Updates the specified user. Any properties omitted from the request body will not be updated. For instance, if the request body only contains "email", only the user's email will be updated; the user's name and description will not be modified.
+      tags:
+        - Users
+      parameters:
+        - name: x-access-token
+          in: header
+          description: Valid JWT belonging to the user being modified.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                email:
+                  type: string
+                  description: A valid email address.
+                password:
+                  type: string
+                  format: password
+                  description: A string between 8 and 24 characters. No special requirements other than length.
+                first:
+                  type: string
+                  description: The user's first name.
+                last:
+                  type: string
+                  description: The user's last name.
+            example:
+              email: mynewemail@email.com
+      responses:
+        303:
+          description: User updated successfully.
+          headers:
+            location:
+              description: A direct link to the updated resource.
+              schema:
+                type: string
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        404:
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Delete a user.
+      description: Deletes the specified user. *This will also delete **ALL** of this user's associated property (i.e. envelopes and expenses).*
+      tags:
+        - Users
+      parameters:
+        - name: x-access-token
+          in: header
+          description: Valid JWT belonging to the user being deleted.
+          required: true
+          schema:
+            type: string
+      responses:
+        204:
+          description: User and all associated property deleted successfully.
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        404:
+          $ref: "#/components/responses/NotFound"
+  /users/{id}/envelopes:
+    parameters:
+      - name: id
+        in: path
+        description: ID of the user to look up.
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get a user's envelopes.
+      description: Get a collection of the specified user's envelopes.
+      tags:
+        - User Property
+      parameters:
+        - name: x-access-token
+          in: header
+          description: Valid JWT for *any* user obtained from POST /auth.
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          $ref: "#/components/responses/Success_EnvelopesCollection"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        404:
+          $ref: "#/components/responses/NotFound"
+  /users/{id}/expenses:
+    parameters:
+      - name: id
+        in: path
+        description: ID of the user to look up.
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get a user's expenses.
+      description: Get a collection of the specified user's expenses.
+      tags:
+        - User Property
+      parameters:
+        - name: x-access-token
+          in: header
+          description: Valid JWT for *any* user obtained from POST /auth.
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          $ref: "#/components/responses/Success_ExpensesCollection"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        404:
+          $ref: "#/components/responses/NotFound"
+components:
+  responses:
+    Success_EnvelopesCollection:
+      description: Successfully retrieved collection of envelopes.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Envelopes_Collection"
+          example: 
+            items:
+              id: "5678567856785678"
+              name: Space Supplies
+              self: https://app.com/envelopes/5678567856785678
+              owner:
+                id: "1234123412341234"
+                self: https://app.com/users/1234123412341234
+              expenses:
+                - id: "222233332223333"
+                  self: https://app.com/expenses/222233332223333
+                - id: "3333222233332222"
+                  self: https://app.com/expenses/3333222233332222
+              totalAmount: 500
+              amountReserved: 261.22
+              amountFree: 238.78
+              expenseCount: 2
+            count: 1
+    Success_ExpensesCollection:
+      description: Successfully retrieved collection of expenses.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Expenses_Collection'
+          example: 
+            items:
+              - id: "222233332223333"
+                name: New spacesuit helmet
+                self: https://app.com/expenses/222233332223333
+                owner:
+                  id: "1234123412341234"
+                  self: https://app.com/users/1234123412341234
+                envelope:
+                  id: "5678567856785678"
+                  self: https://app.com/envelopes/5678567856785678
+                description: To stay safe while sitting in a tin can far above the world...
+                cost: 250
+              - id: "3333222233332222"
+                name: Protein pills
+                self: https://app.com/expenses/3333222233332222
+                owner:
+                  id: "1234123412341234"
+                  self: https://app.com/users/1234123412341234
+                envelope:
+                  id: "5678567856785678"
+                  self: https://app.com/envelopes/5678567856785678
+                description: The idea astronaut food.
+                cost: 11.22
+            count: 2
+    BadRequest:
+      description: The request body did not match the schema for this endpoint.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example: 
+            error: "{missing field} required"
+    NotFound:
+      description: The specified resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example: 
+            error: "{Resource} ID 5555444433332222 not found."
+    Unauthorized:
+      description: The request's x-access-token header was missing or contained an invalid token. If a valid, unexpired token was provided, the user associated with it most likely does not have permission to access one or more of the requested resource(s).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples: 
+            Missing Token:
+              value:
+                error: Header "x-access-token" required.
+            Bad Token:
+              value:
+                error: jwt malformed
+            Expired Token: 
+              value: 
+                error: jwt expired
+            Unauthorized User:
+              value: 
+                error: You are not authorized to make changes to this resource.
+  schemas:
+    Envelope:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The envelope's 16-digit datastore ID. This is returned as a string to prevent truncation in the even an ID contains leading zeroes.
+        name:
+          type: string
+          description: The name of the envelope.
+        self:
+          type: string
+          description: The URL to access this resource directly (i.e. .../envelopes/{id}).
+        owner:
+          $ref: "#/components/schemas/User_Truncated"
+        expenses:
+          type: array
+          description: An array of expenses assigned to this envelope.
+          items:
+            $ref: "#/components/schemas/Expense_Truncated"
+        totalAmount:
+          type: number
+          description: The total amount of money allotted to the envelope. For example, if envelope.totalAmount = 200, you have $250 to assign to various expenses.
+        amountReserved:
+          type: number
+          description: The total cost of all expenses assigned to this envelope. It is possible for amountReserved to be greater than totalAmount.
+        amountFree:
+          type: number
+          description: The amount of money left in the envelope after subtracting all the expenses. It is possible for amountFree to be negative.
+        expenseCount:
+          type: integer
+          description: The count of all expenses assigned to this envelope.
+        
+    Envelope_Truncated:
+      type: object
+      properties:
+        id:
+          type: string
+          description: An envelope's 16-digit datastore ID. This is returned as a string to prevent truncation in the even an ID contains leading zeroes.
+        self:
+          type: string
+          description: The URL to access this envelope directly (i.e. .../envelopes/{id}).
+    
+    Envelopes_Collection:
+      type: object
+      required:
+      - items
+      - count
+      properties:
+        items:
+          type: array
+          description: An array of envelopes.
+          items: 
+            $ref: "#/components/schemas/Envelope"
+        count:
+          type: integer
+          description: The total count of all envelopes matching the query.
+        next:
+          type: string
+          description: A URL to the next page of results (if applicable).
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message.
+          
+    Expense:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The expense's 16-digit datastore ID. This is returned as a string to prevent truncation in the even an ID contains leading zeroes.
+        name:
+          type: string
+          description: The name of the expense.
+        self:
+          type: string
+          description: The URL to access this resource directly (i.e. .../expenses/{id}).
+        owner:
+          $ref: "#/components/schemas/User_Truncated"
+        envelope:
+          $ref: "#/components/schemas/Envelope_Truncated"
+        cost:
+          type: number
+          description: The cost of the expense.
+        description:
+          type: string
+          description: A description of the expense.
+          
+    Expense_Truncated:
+      type: object
+      properties:
+        id:
+          type: string
+          description: An expense's 16-digit datastore ID. This is returned as a string to prevent truncation in the even an ID contains leading zeroes.
+        self:
+          type: string
+          description: The URL to access this expense directly (i.e. .../expenses/{id}).
+        
+    Expenses_Collection:
+      type: object
+      required:
+      - items
+      - count
+      properties:
+        items:
+          type: array
+          description: An array of expenses.
+          items: 
+            $ref: "#/components/schemas/Expense"
+        count:
+          type: integer
+          description: The total count of all expenses matching the query.
+        next:
+          type: string
+          description: A URL to the next page of results (if applicable).
+          
+    User:
+      type: object
+      required:
+        - email
+        - password
+        - first
+        - last
+      properties:
+        email:
+          type: string
+          description: A valid email address.
+        password:
+          type: string
+          format: password
+          description: A string between 8 and 24 characters. No special requirements other than length.
+        first:
+          type: string
+          description: The user's first name.
+        last:
+          type: string
+          description: The user's last name.
+          
+    User_Protected:
+      type: object
+      required:
+      - id
+      - self
+      - email
+      - first
+      - last
+      properties:
+        id:
+          type: string
+          description: A user's 16-digit datastore ID. This is returned as a string to prevent truncation in the even an ID contains leading zeroes.
+        self:
+          type: string
+          description: The URL to access this resource directly (i.e. .../users/{id}).
+        email:
+          type: string
+          description: A valid email addres.
+        first:
+          type: string
+          description: The user's first name.
+        last:
+          type: string
+          description: The user's last name.
+          
+    Users_Collection:
+      type: object
+      required:
+      - items
+      - count
+      properties:
+        items:
+          type: array
+          description: An array of users.
+          items: 
+            $ref: "#/components/schemas/User_Protected"
+        count:
+          type: integer
+          description: The total count of all users matching the query.
+        next:
+          type: string
+          description: A URL to the next page of results (if applicable).
+
+          
+    User_Truncated:
+      type: object
+      properties:
+        id:
+          type: string
+          description: A user's 16-digit datastore ID. This is returned as a string to prevent truncation in the even an ID contains leading zeroes.
+        self:
+          type: string
+          description: The URL to access this user directly (i.e. .../users/{id}).
