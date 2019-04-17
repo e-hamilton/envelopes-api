@@ -2,9 +2,9 @@ openapi: 3.0.0
 info:
   version: "1.0.0"
   title: Envelope Budgeting API
-  description: This simple personal finance budgeting API allows users to organize expenses into "envelopes" using the "envelope budgeting" strategy. More background information on this API is available on the project's README at [https://github.com/e-hamilton](https://github.com/e-hamilton).
+  description: This simple personal finance budgeting API allows users to organize expenses into "envelopes" using the "envelope budgeting" strategy. More background information on this API is available on the project's README at [https://github.com/e-hamilton/envelopes-api/blob/master/README.md](https://github.com/e-hamilton/envelopes-api/blob/master/README.md).
 externalDocs: 
-  url: https://github.com/e-hamilton
+  url: https://github.com/e-hamilton/envelopes-api
   description: View on GitHub
 servers:
   - url: https://envelopes-api.herokuapp.com/

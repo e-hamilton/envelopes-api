@@ -8,7 +8,6 @@
     "start": "node app.js"
   },
   "author": "Emily Hamilton (https://github.com/e-hamilton)",
-  "license": "ISC",
   "dependencies": {
     "@google-cloud/datastore": "^3.1.2",
     "bcrypt": "^3.0.5",
